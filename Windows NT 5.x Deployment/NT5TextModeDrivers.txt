@@ -1,0 +1,121 @@
+📘 RIS AHCI/RAID Driver Integration Guide (Windows 2000 / XP / 2003)
+
+Text‑Mode Mass‑Storage Driver Integration for NT 5.x RIS Images
+1. Overview
+
+Remote Installation Services (RIS) uses Windows NT 5.x text‑mode setup. To enable SATA/AHCI/RAID disk detection, you must integrate OEM text‑mode drivers into the RIS image. This process replaces the old F6 floppy method.
+
+This guide applies to:
+
+    Windows 2000
+
+    Windows XP (all editions)
+
+    Windows Server 2003
+
+2. Requirements
+
+You need a text‑mode mass‑storage driver package containing:
+
+    txtsetup.oem
+
+    One or more .sys files
+
+    Matching .inf files
+
+    Matching .cat files
+
+These must be compatible with the OS you are deploying.
+3. Copy Driver Files to the RIS Image
+
+Navigate to your RIS image directory:
+Code
+
+\\<RIS-SERVER>\REMINST\Setup\English\Images\<IMAGE>\i386
+
+Copy all driver files into the i386 folder (or a subfolder, as long as they are listed later).
+
+Example:
+Code
+
+iastor.sys
+iastor.inf
+iastor.cat
+iaahci.inf
+iaahci.cat
+txtsetup.oem
+
+4. Edit ristndrd.sif
+
+Open:
+Code
+
+...\Images\<IMAGE>\i386\Templates\ristndrd.sif
+
+4.1 Enable OEM Preinstall
+Code
+
+[Unattended]
+OemPreinstall = Yes
+
+4.2 Add the Controller to Mass‑Storage Drivers
+
+Find the exact controller name in txtsetup.oem under [scsi].
+
+Add it here:
+Code
+
+[MassStorageDrivers]
+"Controller Name From txtsetup.oem" = OEM
+
+Example:
+Code
+
+"Intel(R) 82801HEM/HBM SATA AHCI Controller (Mobile ICH8M-E/M)" = OEM
+
+4.3 List All Driver Files in OEMBootFiles
+
+Every file the driver needs must be listed:
+Code
+
+[OEMBootFiles]
+iastor.sys
+iastor.inf
+iastor.cat
+iaahci.inf
+iaahci.cat
+txtsetup.oem
+
+If a file is missing from this list, RIS will not copy it.
+5. Restart the Deployment Service
+
+On Windows Server 2003 SP2 (RIS replaced by WDS):
+Code
+
+net stop wdsserver
+net start wdsserver
+
+This forces RIS/WDS to reload the driver list.
+6. PXE Boot the Client
+
+If integration is correct, you will observe:
+
+    The AHCI/RAID driver (iastor.sys, etc.) loading during text‑mode setup
+
+    Disk detection without pressing F6
+
+    Normal partitioning and formatting
+
+    No 0x7B BSOD
+
+The installation will proceed normally, including unattended settings.
+7. Summary Formula
+Code
+
+1. Copy driver files → i386
+2. Add controller name → [MassStorageDrivers]
+3. List all driver files → [OEMBootFiles]
+4. Restart WDS/RIS service
+5. PXE boot and install
+
+This is the complete NT 5.x RIS text‑mode driver integration process.
