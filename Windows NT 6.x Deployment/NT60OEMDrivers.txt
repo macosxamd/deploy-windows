@@ -1,0 +1,42 @@
+## Injecting Drivers into boot.wim (The Setup/Boot Environment)
+The boot.wim file contains the Windows Preinstallation Environment (WinPE). You inject drivers here so that the Windows setup installer can recognize network cards, RAID arrays, and hard drives at startup.
+## 1. Mount the Boot Image
+Create a folder and extract index 2 of the boot image (index 2 contains the setup interface).
+
+mkdir C:\Mount\Boot
+imagex /mountrw C:\sources\boot.wim 2 C:\Mount\Boot
+
+## 2. Inject the Boot Drivers
+Use peimg.exe to target the Windows directory. You must target storage and network .inf files directly.
+
+peimg /inf=C:\Drivers\Network\netcard.inf C:\Mount\Boot\Windows
+peimg /inf=C:\Drivers\Storage\raid.inf C:\Mount\Boot\Windows
+
+## 3. Save and Close the Boot Image
+Commit the changes and close the tracking folder.
+
+imagex /unmount /commit C:\Mount\Boot
+
+------------------------------
+## Injecting Drivers into install.wim (The Main OS Image)
+The install.wim file contains the actual desktop operating system. You inject drivers here so that the drivers are fully installed and available when the user arrives at the Windows desktop.
+## 1. Mount the Installation Image
+Create a separate folder and extract the index of your target operating system edition (usually index 1).
+
+mkdir C:\Mount\Install
+imagex /mountrw C:\sources\install.wim 1 C:\Mount\Install
+
+## 2. Inject the OS Drivers
+Because peimg.exe bypasses extension checks and modifies the internal registry hives directly, you can run the exact same syntax on the mounted installation folder.
+
+peimg /inf=C:\Drivers\Chipset\intel.inf C:\Mount\Install\Windows
+peimg /inf=C:\Drivers\Video\display.inf C:\Mount\Install\Windows
+peimg /inf=C:\Drivers\Audio\sound.inf C:\Mount\Install\Windows
+
+(Note: You must explicitly write a separate command line for every single individual .inf file, as wildcards and folder scanning are not supported).
+## 3. Save and Close the Installation Image
+Commit the modifications back into the compressed WIM archive.
+
+imagex /unmount /commit C:\Mount\Install
+
+

@@ -1,0 +1,48 @@
+## DISM DRIVER INJECTION GUIDE (PLAIN TEXT)## ====================================================================
+PART 1: PREPARATION
+
+   1. Create a work folder on your C: drive named "Workspace".
+   2. Inside "Workspace", create a folder named "Mount".
+   3. Inside "Mount", create two folders named "Boot" and "Install".
+   4. Inside "Workspace", create a folder named "Drivers".
+   5. Inside "Drivers", create two folders named "BootDrivers" and "OSDrivers".
+
+Folder structure summary:
+C:\Workspace\Mount\Boot
+C:\Workspace\Mount\Install
+C:\Workspace\Drivers\BootDrivers
+C:\Workspace\Drivers\OSDrivers
+
+   1. Copy your critical boot drivers (Storage, RAID, NVMe, USB 3.0, Network LAN) into the "BootDrivers" folder.
+   2. Copy your main operating system drivers (Chipset, Video, Audio, Wi-Fi, Bluetooth) into the "OSDrivers" folder.
+   3. Copy your "boot.wim" and "install.wim" files to a temporary location, for example "C:\sources".
+
+Open a Command Prompt as an Administrator to run the following commands.
+## ====================================================================
+PART 2: SERVICING THE BOOT IMAGE (BOOT.WIM)
+
+   1. Mount the boot image. Command Prompt uses Index 2 for the Windows Setup environment:
+   dism /Mount-Wim /WimFile:"C:\sources\boot.wim" /Index:2 /MountDir:"C:\Workspace\Mount\Boot"
+   2. Inject the boot drivers. DISM automatically searches all subfolders:
+   dism /Image:"C:\Workspace\Mount\Boot" /Add-Driver /Driver:"C:\Workspace\Drivers\BootDrivers" /Recurse
+   3. Unmount the image and save the changes:
+   dism /Unmount-Wim /MountDir:"C:\Workspace\Mount\Boot" /Commit
+
+## ====================================================================
+PART 3: SERVICING THE INSTALLATION IMAGE (INSTALL.WIM)
+
+   1. Check the image content to find your target operating system index number (e.g., Windows Home, Pro, Enterprise):
+   dism /Get-WimInfo /WimFile:"C:\sources\install.wim"
+   2. Mount the installation image using the specific index number found in the previous step (replace /Index:1 if your target index is different):
+   dism /Mount-Wim /WimFile:"C:\sources\install.wim" /Index:1 /MountDir:"C:\Workspace\Mount\Install"
+   3. Inject the operating system drivers:
+   dism /Image:"C:\Workspace\Mount\Install" /Add-Driver /Driver:"C:\Workspace\Drivers\OSDrivers" /Recurse
+
+Note: If you have old or unsigned drivers, add the text " /ForceUnsigned" to the end of the command above.
+
+   1. Unmount the image and save the changes:
+   dism /Unmount-Wim /MountDir:"C:\Workspace\Mount\Install" /Commit
+
+## ====================================================================
+PART 4: CLEANUP
+Your updated "boot.wim" and "install.wim" files are now ready in "C:\sources" to be copied back into your Windows installation media. You can safely delete the "C:\Workspace" folder when finished.
