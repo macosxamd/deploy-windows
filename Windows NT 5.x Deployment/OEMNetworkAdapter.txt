@@ -1,0 +1,36 @@
+How to Add an OEM Network Adapter Driver to a RIS Installation
+Valid on Windows Server 2003 and Windows XP
+
+Symptom:
+
+Adding a network adapter that requires an OEM driver to a CD-ROM-based RIS image involves some of the steps as adding such a driver to a typical unattended installation. However, because the installation method begins by using Pre-Boot eXecution Environment (PXE) and then switches over to using the Server Message Block (SMB) protocol, the network adapter driver and its .inf file must be available during text-mode setup. If the driver and the .inf file are not available, you receive the following error message:
+
+The network server does not support booting Windows 2003. Setup cannot continue. Press any key to exit.
+
+When a PXE client that is running Client Installation Wizard (CIW) connects to an RIS server, the network adapter is using Universal Network Device Interface to communicate with the RIS server. When Windows Setup switches to SMB, the network adapter is detected, and the appropriate driver is loaded. Therefore, the driver must be available.
+
+Solution:
+
+You can add the OEM network adapter to the RIS image.
+
+Do the following:
+
+Check with the OEM to determine whether the supplied network adapter driver is digitally signed. If the drivers from the manufacturer contain a catalog (.cat) file, they are properly signed. Drivers signed by Microsoft have been verified and tested to work with Windows. If your driver has not been signed but you still want to use it, make sure to add the following unattended-setup parameter to the .sif file that is located in the RemoteInstall\Setup\Language\Images\Dir_name\I386\Templates folder: [Unattended]
+
+DriverSigningPolicy = Ignore
+Note: If the OEM driver is an update of an included Windows XP driver (for example, if the drivers have the same name), the file must be signed or else Setup uses the included driver instead.
+
+On the RIS server, copy the OEM-supplied .inf and .sys files for the network adapter to the RemoteInstall\Setup\Language\Images\Dir_name\i386 folder. This allows Setup to use the driver during the text-mode portion of the installation.
+At the same level as the i386 folder on the RIS image, create a $oem$ folder. Use the following structure:
+\$oem$\$1\Drivers\Nic 
+Copy the OEM-supplied driver files to this folder. Note the folder in which the .inf file looks for its drivers. Some manufacturers place the .inf file in a folder and copy the driver files from a subfolder. If this is the case, create the same folder structure below the one you created in this step.
+Make the following changes to the .sif file that is used for this image installation:
+[Unattended]
+OemPreinstall = yes
+OemPnpDriversPath = \Drivers\Nic
+Stop and then restart the Remote Installation service (BINLSVC) on the RIS server. To do this, type the following commands at the command prompt and press Enter after each command:
+net Stop binlsvc
+net Start binlsvc
+Note: You must stop and restart the Remote Installation Service because the Boot Information Negotiation Layer (BINL) needs to read all the new network adapter-related .inf files and create .pnf files in the image. This is a time-consuming task and is performed only when the Remote Installation Service starts.
+
+If you have multiple network adapters that require OEM drivers, follow the preceding steps for each adapter. However, the PXE clients that have included network adapter drivers are unaffected by these changes and can use this image for installation.

@@ -1,0 +1,81 @@
+Add an OEM SCSI/RAID/SCSI Driver When Setup Fails
+Valid on Windows Server 2003 and Windows XP
+
+Symptom:
+
+If your machine boots from a hard disk which connects to an OEM SCSI adapter, the setup will fail. So, to use RIS to set up computer nodes you must add the OEM SCSI adapter mode drivers to the RIS image.
+
+Solution:
+
+This procedure is specifically for an Adaptec AAR-1420SA SATA HostRAID driver, but you can use it when other drivers are required.
+
+To add an OEM SCSI/RAID/SCSI driver to a RIS image
+
+Click Install RIS, as a section of the Cluster Deployment Tasks involves RIS.
+The Remote Installation Services Wizard appears on your server.
+
+Click Manage Images and choose Add New Image.
+For client support, you typically check Respond to client computers requesting service.
+
+Click Manage Images a second time and select Modify Image Configuration to add your image key.
+The mass storage drivers are only copied during the Text Mode portion of the compute node setup through RIS. You need to add an $OEM$\TEXTMODE folder to the image. Your folder structure should look like this:
+
+%RIS_IMAGE_FOLDER%\amd64 (this folder already exists) 
+%RIS_IMAGE_FOLDER%\i386 (this folder already exists)  
+%RIS_IMAGE_FOLDER%\$OEM$ (create this folder)  
+%RIS_IMAGE_FOLDER%\$OEM$\TEXTMODE (create this subfolder)
+Note: %RIS_IMAGE_FOLDER% is the folder which holds the RIS image on the head node. This folder might be similar to this:
+
+D:\RemoteInstall\Setup\English\Images\WINDOWS
+Copy the setup files from the driver disk to the TEXTMODE folder.
+In this example, there are four files:
+
+%RIS_IMAGE_FOLDER%\$OEM$\TEXTMODE\txtsetup.oem
+%RIS_IMAGE_FOLDER%\$OEM$\TEXTMODE\aar81xx.inf
+%RIS_IMAGE_FOLDER%\$OEM$\TEXTMODE\aar81xx.sys
+%RIS_IMAGE_FOLDER%\$OEM$\TEXTMODE\aar81xx.sys
+TXTSETUP.OEM, which was copied in the previous step, must be edited to reflect this new path for the drivers. In the [Disks] section, modify disk1 (or d1) to reflect the new path. In the example below, the original entry is commented out and a new entry added:
+
+[Disks]
+# d1 = "Adaptec AAR-1420SA Serial ATA HostRAID Driver for Windows x64 Edition (EM64T/AMD64)", \hraidsk1, \amd64
+d1 = "Adaptec AAR-1420SA Serial ATA HostRAID Driver for Windows x64 Edition (EM64T/AMD64)", \, \
+Note: When you run an unattended installation using a small computer system interface (SCSI) controller with a manufacturer's drives, you may receive the following error message: Illegal or missing file types specified in section Files.SCSI.name. This behavior might occur because the line in the Txtsetup.oem file under the [Files.SCSI.name] heading is not a supported file type for a SCSI.
+
+For example, if you found an unsupported file type (such as a .dll), in the [Files.SCSI.name] section, you must remove the line.
+
+Edit the file RISTNDRD.SIF to indicate that a mass storage driver must be installed with the operating system and the location of the required files. This file is located in the %RIS_IMAGE_FOLDER%\amd64\Templates folder. Add the lines shown below the comment "# Add these lines." The name used in the [MassStorageDrivers] section should correspond to the name given in the [SCSI] section of TXTSETUP.OEM. After editing, save the file.
+[data]
+floppyless="1"
+msdosinitiated="1"
+OriSrc="\\%SERVERNAME%\RemInst\%INSTALLPATH%\%MACHINETYPE"
+OriTyp="4"
+LocalSourceOnCD=1
+DisableAdminAccountOnDomainJoin=1
+[SetupData]
+OsLoadOptions="/noguiboot /fastdetect"
+SetupSourceDevice="\Device\LanmanRedirector\%SERVERNAME%\RemInst\%INSTALLPATH%"
+[Unattended]
+OemPreinstall=yes
+FileSystem=LeaveAlone
+ExtendOEMPartition=0
+TargetPath=\WINDOWS
+OemSkipEula=yes
+InstallFilesPath="\\%SERVERNAME%\RemInst\%INSTALLPATH%\%MACHINETYPE%"
+LegacyNIC=1
+UnattendMode=FullUnattended
+WaitForReboot=no
+#Add these lines
+OemPnPDriversPath=”\\%SERVERNAME%\RemInst\%INSTALLPATH%\$OEM$\textmode”
+DUDisable=no
+DriverSigningPolicy=ignore
+[MassStorageDrivers]
+"Adaptec HOSTRAID driver for Windows XP/2003 x64 Edition"="OEM"
+[OEMBootFiles]
+aar81xx.cat
+aar81xx.inf
+aar81xx.sys
+txtsetup.oem
+Stop and restart the RIS service on the head node by typing the following at a command prompt:
+net stop binlsvc
+net start binlsvc
+
